@@ -15,7 +15,7 @@ Dieses Repo enthält ein IaC‑Deployment (Bicep + ARM JSON) für eine kleine Ne
 
 > **Wichtig:** Der Button funktioniert erst, wenn du dieses Repo auf GitHub liegen hast und die Dateien per **raw.githubusercontent.com** erreichbar sind.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/REPLACE_WITH_RAW_TEMPLATE_JSON_URL)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/Vertax1337/nextcloud-azure/refs/heads/main/azuredeploy.json)
 
 ### Was du ersetzen musst
 Ersetze im Button‑Link oben:
