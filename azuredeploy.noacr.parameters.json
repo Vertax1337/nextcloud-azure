@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "westeurope" },
+    "prefix": { "value": "nc50m" },
+
+    "cloudFqdn": { "value": "cloud.50er-jahre-museum.de" },
+    "officeFqdn": { "value": "office.50er-jahre-museum.de" },
+
+    "useAcr": { "value": false },
+    "nextcloudImageOverride": { "value": "nextcloud:production-apache" },
+
+    "nextcloudAdminUser": { "value": "admin" },
+    "nextcloudAdminPassword": { "value": "CHANGE_ME_STRONG_ADMIN_PASSWORD" },
+
+    "postgresAdminUser": { "value": "ncadmin" },
+    "postgresAdminPassword": { "value": "CHANGE_ME_STRONG_DB_PASSWORD" },
+    "postgresDbName": { "value": "nextcloud" },
+
+    "onlyofficeJwtSecret": { "value": "CHANGE_ME_LONG_RANDOM_JWT_SECRET" },
+
+    "ncCpu": { "value": "0.5" },
+    "ncMemory": { "value": "1Gi" },
+    "ooCpu": { "value": "1.0" },
+    "ooMemory": { "value": "2Gi" }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "useAcr": {
+      "value": false
+    },
+    "nextcloudImageOverride": {
+      "value": "nextcloud:production-apache"
+    },
+    "prefix": {
+      "value": "nc-museum"
+    },
+    "cloudFqdn": {
+      "value": "cloud.50er-jahre-museum.de"
+    },
+    "officeFqdn": {
+      "value": "office.50er-jahre-museum.de"
+    },
+    "nextcloudAdminUser": {
+      "value": "admin"
+    },
+    "postgresAdminUser": {
+      "value": "ncadmin"
+    },
+    "postgresDbName": {
+      "value": "nextcloud"
+    },
+    "ncCpu": {
+      "value": "0.5"
+    },
+    "ncMemory": {
+      "value": "1.0Gi"
+    },
+    "ooCpu": {
+      "value": "1.0"
+    },
+    "ooMemory": {
+      "value": "4.0Gi"
+    }
+  }
+}
