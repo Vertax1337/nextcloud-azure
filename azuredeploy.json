@@ -115,7 +115,7 @@
     },
     "useAcr": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": false,
       "metadata": {
         "description": "If true, deploy ACR + build/push your custom Nextcloud image there. If false, set nextcloudImageOverride to a public image and skip ACR."
       }
