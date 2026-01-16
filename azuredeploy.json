@@ -172,15 +172,7 @@
           {
             "name": "aca-infra",
             "properties": {
-              "addressPrefix": "10.42.0.0/23",
-              "delegations": [
-                {
-                  "name": "acaDelegation",
-                  "properties": {
-                    "serviceName": "Microsoft.App/environments"
-                  }
-                }
-              ]
+              "addressPrefix": "10.42.0.0/23"              
             }
           },
           {
