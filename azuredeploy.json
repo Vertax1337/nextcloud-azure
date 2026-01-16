@@ -1,892 +1,1034 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "metadata": {
-    "_generator": {
-      "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "10488836344072995553"
-    }
-  },
-  "parameters": {
-    "location": {
-      "type": "string",
-      "defaultValue": "[resourceGroup().location]",
-      "metadata": {
-        "description": "Azure region for all resources."
-      }
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "metadata": {
+        "_generator": {
+            "name": "bicep",
+            "version": "0.39.26.7824",
+            "templateHash": "10488836344072995553"
+        }
     },
-    "prefix": {
-      "type": "string",
-      "defaultValue": "nc50m",
-      "minLength": 2,
-      "maxLength": 10,
-      "metadata": {
-        "description": "Short prefix used for resource names. Lowercase letters+digits recommended."
-      }
-    },
-    "cloudFqdn": {
-      "type": "string",
-      "defaultValue": "cloud.50er-jahre-museum.de",
-      "metadata": {
-        "description": "Public hostname you will bind to the Nextcloud Container App (custom domain)."
-      }
-    },
-    "officeFqdn": {
-      "type": "string",
-      "defaultValue": "office.50er-jahre-museum.de",
-      "metadata": {
-        "description": "Public hostname you will bind to the ONLYOFFICE Container App (custom domain)."
-      }
-    },
-    "nextcloudAdminUser": {
-      "type": "string",
-      "defaultValue": "admin",
-      "metadata": {
-        "description": "Admin username that Nextcloud will create on first install."
-      }
-    },
-    "nextcloudAdminPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Admin password that Nextcloud will create on first install."
-      }
-    },
-    "postgresAdminUser": {
-      "type": "string",
-      "defaultValue": "ncadmin",
-      "metadata": {
-        "description": "PostgreSQL admin login (also used by Nextcloud as DB user in this small setup)."
-      }
-    },
-    "postgresAdminPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "PostgreSQL admin password."
-      }
-    },
-    "postgresDbName": {
-      "type": "string",
-      "defaultValue": "nextcloud",
-      "metadata": {
-        "description": "PostgreSQL database name for Nextcloud."
-      }
-    },
-    "onlyofficeJwtSecret": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Shared JWT secret for ONLYOFFICE <-> Nextcloud integration. Use a long random value."
-      }
-    },
-    "nextcloudImageTag": {
-      "type": "string",
-      "defaultValue": "production-apache",
-      "metadata": {
-        "description": "Nextcloud image tag for your custom image build. Keep this aligned with your Docker build."
-      }
-    },
-    "ncCpu": {
-      "type": "string",
-      "defaultValue": "0.5",
-      "metadata": {
-        "description": "Sizing: Nextcloud main container CPU cores (e.g., 0.5, 1.0)."
-      }
-    },
-    "ncMemory": {
-      "type": "string",
-      "defaultValue": "1Gi",
-      "metadata": {
-        "description": "Sizing: Nextcloud main container memory (e.g., 1Gi, 2Gi)."
-      }
-    },
-    "ooCpu": {
-      "type": "string",
-      "defaultValue": "1.0",
-      "metadata": {
-        "description": "Sizing: ONLYOFFICE container CPU cores (e.g., 1.0, 2.0)."
-      }
-    },
-    "ooMemory": {
-      "type": "string",
-      "defaultValue": "2Gi",
-      "metadata": {
-        "description": "Sizing: ONLYOFFICE container memory (e.g., 2Gi, 4Gi)."
-      }
-    },
-    "useAcr": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "If true, deploy ACR + build/push your custom Nextcloud image there. If false, set nextcloudImageOverride to a public image and skip ACR."
-      }
-    },
-    "nextcloudImageOverride": {
-      "type": "string",
-      "defaultValue": "nextcloud:production-apache",
-      "metadata": {
-        "description": "If useAcr=false, provide a full image reference here (e.g., ghcr.io/org/nextcloud-custom:tag). Default is nextcloud:production-apache for a working non-ACR deployment (without custom hook)."
-      }
-    }
-  },
-  "variables": {
-    "uniq": "[toLower(substring(uniqueString(subscription().subscriptionId, resourceGroup().id), 0, 10))]",
-    "namePrefix": "[toLower(replace(parameters('prefix'), '-', ''))]",
-    "acrName": "[toLower(format('{0}{1}acr', variables('namePrefix'), variables('uniq')))]",
-    "storageName": "[toLower(format('{0}{1}st', variables('namePrefix'), variables('uniq')))]",
-    "vnetName": "[format('{0}-{1}-vnet', variables('namePrefix'), variables('uniq'))]",
-    "caEnvName": "[format('{0}-{1}-cae', variables('namePrefix'), variables('uniq'))]",
-    "pgServerName": "[toLower(format('{0}{1}pg', variables('namePrefix'), variables('uniq')))]",
-    "laName": "[format('{0}-{1}-law', variables('namePrefix'), variables('uniq'))]",
-    "ncAppName": "[format('{0}-{1}-nc', variables('namePrefix'), variables('uniq'))]",
-    "ooAppName": "[format('{0}-{1}-office', variables('namePrefix'), variables('uniq'))]",
-    "ncShareName": "nextcloud",
-    "redisImage": "redis:7-alpine",
-    "onlyofficeImage": "onlyoffice/documentserver:latest",
-    "acrPullRoleDefId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"
-  },
-  "resources": [
-    {
-      "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2023-09-01",
-      "name": "[variables('laName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "sku": {
-          "name": "PerGB2018"
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Azure region for all resources."
+            }
         },
-        "retentionInDays": 30
-      }
-    },
-    {
-      "type": "Microsoft.Network/virtualNetworks",
-      "apiVersion": "2023-09-01",
-      "name": "[variables('vnetName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "10.42.0.0/16"
-          ]
+        "prefix": {
+            "type": "string",
+            "defaultValue": "nc50m",
+            "minLength": 2,
+            "maxLength": 10,
+            "metadata": {
+                "description": "Short prefix used for resource names. Lowercase letters+digits recommended."
+            }
         },
-        "subnets": [
-          {
-            "name": "aca-infra",
+        "cloudFqdn": {
+            "type": "string",
+            "defaultValue": "cloud.50er-jahre-museum.de",
+            "metadata": {
+                "description": "Public hostname you will bind to the Nextcloud Container App (custom domain)."
+            }
+        },
+        "officeFqdn": {
+            "type": "string",
+            "defaultValue": "office.50er-jahre-museum.de",
+            "metadata": {
+                "description": "Public hostname you will bind to the ONLYOFFICE Container App (custom domain)."
+            }
+        },
+        "nextcloudAdminUser": {
+            "type": "string",
+            "defaultValue": "admin",
+            "metadata": {
+                "description": "Admin username that Nextcloud will create on first install."
+            }
+        },
+        "nextcloudAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Admin password that Nextcloud will create on first install."
+            }
+        },
+        "postgresAdminUser": {
+            "type": "string",
+            "defaultValue": "ncadmin",
+            "metadata": {
+                "description": "PostgreSQL admin login (also used by Nextcloud as DB user in this small setup)."
+            }
+        },
+        "postgresAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "PostgreSQL admin password."
+            }
+        },
+        "postgresDbName": {
+            "type": "string",
+            "defaultValue": "nextcloud",
+            "metadata": {
+                "description": "PostgreSQL database name for Nextcloud."
+            }
+        },
+        "onlyofficeJwtSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Shared JWT secret for ONLYOFFICE <-> Nextcloud integration. Use a long random value."
+            }
+        },
+        "nextcloudImageTag": {
+            "type": "string",
+            "defaultValue": "production-apache",
+            "metadata": {
+                "description": "Nextcloud image tag for your custom image build. Keep this aligned with your Docker build."
+            }
+        },
+        "ncCpu": {
+            "type": "string",
+            "defaultValue": "0.5",
+            "metadata": {
+                "description": "Sizing: Nextcloud main container CPU cores (e.g., 0.5, 1.0)."
+            }
+        },
+        "ncMemory": {
+            "type": "string",
+            "defaultValue": "1Gi",
+            "metadata": {
+                "description": "Sizing: Nextcloud main container memory (e.g., 1Gi, 2Gi)."
+            }
+        },
+        "ooCpu": {
+            "type": "string",
+            "defaultValue": "1.0",
+            "metadata": {
+                "description": "Sizing: ONLYOFFICE container CPU cores (e.g., 1.0, 2.0)."
+            }
+        },
+        "ooMemory": {
+            "type": "string",
+            "defaultValue": "2Gi",
+            "metadata": {
+                "description": "Sizing: ONLYOFFICE container memory (e.g., 2Gi, 4Gi)."
+            }
+        },
+        "useAcr": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "If true, deploy ACR + build/push your custom Nextcloud image there. If false, set nextcloudImageOverride to a public image and skip ACR."
+            }
+        },
+        "nextcloudImageOverride": {
+            "type": "string",
+            "defaultValue": "nextcloud:production-apache",
+            "metadata": {
+                "description": "If useAcr=false, provide a full image reference here (e.g., ghcr.io/org/nextcloud-custom:tag). Default is nextcloud:production-apache for a working non-ACR deployment (without custom hook)."
+            }
+        }
+    },
+    "variables": {
+        "uniq": "[toLower(substring(uniqueString(subscription().subscriptionId, resourceGroup().id), 0, 10))]",
+        "namePrefix": "[toLower(replace(parameters('prefix'), '-', ''))]",
+        "acrName": "[toLower(format('{0}{1}acr', variables('namePrefix'), variables('uniq')))]",
+        "storageName": "[toLower(format('{0}{1}st', variables('namePrefix'), variables('uniq')))]",
+        "vnetName": "[format('{0}-{1}-vnet', variables('namePrefix'), variables('uniq'))]",
+        "caEnvName": "[format('{0}-{1}-cae', variables('namePrefix'), variables('uniq'))]",
+        "pgServerName": "[toLower(format('{0}{1}pg', variables('namePrefix'), variables('uniq')))]",
+        "laName": "[format('{0}-{1}-law', variables('namePrefix'), variables('uniq'))]",
+        "ncAppName": "[format('{0}-{1}-nc', variables('namePrefix'), variables('uniq'))]",
+        "ooAppName": "[format('{0}-{1}-office', variables('namePrefix'), variables('uniq'))]",
+        "redisImage": "redis:7-alpine",
+        "onlyofficeImage": "onlyoffice/documentserver:latest",
+        "acrPullRoleDefId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "ncDataShareName": "ncdata",
+        "ncConfigShareName": "ncconfig",
+        "ncAppsShareName": "ncapps",
+        "ncDataStorageName": "ncdata",
+        "ncConfigStorageName": "ncconfig",
+        "ncAppsStorageName": "ncapps"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2023-09-01",
+            "name": "[variables('laName')]",
+            "location": "[parameters('location')]",
             "properties": {
-              "addressPrefix": "10.42.0.0/23"              
+                "sku": {
+                    "name": "PerGB2018"
+                },
+                "retentionInDays": 30
             }
-          },
-          {
-            "name": "pg-delegated",
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2023-09-01",
+            "name": "[variables('vnetName')]",
+            "location": "[parameters('location')]",
             "properties": {
-              "addressPrefix": "10.42.2.0/24",
-              "delegations": [
-                {
-                  "name": "pgDelegation",
-                  "properties": {
-                    "serviceName": "Microsoft.DBforPostgreSQL/flexibleServers"
-                  }
-                }
-              ]
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.42.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "aca-infra",
+                        "properties": {
+                            "addressPrefix": "10.42.0.0/23",
+                            "delegations": [
+                                {
+                                    "name": "acaDelegation",
+                                    "properties": {
+                                        "serviceName": "Microsoft.App/environments"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "pg-delegated",
+                        "properties": {
+                            "addressPrefix": "10.42.2.0/24",
+                            "delegations": [
+                                {
+                                    "name": "pgDelegation",
+                                    "properties": {
+                                        "serviceName": "Microsoft.DBforPostgreSQL/flexibleServers"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Network/privateDnsZones",
-      "apiVersion": "2020-06-01",
-      "name": "private.postgres.database.azure.com",
-      "location": "global"
-    },
-    {
-      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-      "apiVersion": "2020-06-01",
-      "name": "[format('{0}/{1}-link', 'private.postgres.database.azure.com', variables('vnetName'))]",
-      "location": "global",
-      "properties": {
-        "virtualNetwork": {
-          "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
         },
-        "registrationEnabled": false
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/privateDnsZones', 'private.postgres.database.azure.com')]",
-        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2023-01-01",
-      "name": "[variables('storageName')]",
-      "location": "[parameters('location')]",
-      "kind": "StorageV2",
-      "sku": {
-        "name": "Standard_LRS"
-      },
-      "properties": {
-        "allowBlobPublicAccess": false,
-        "minimumTlsVersion": "TLS1_2",
-        "supportsHttpsTrafficOnly": true
-      }
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts/fileServices",
-      "apiVersion": "2023-01-01",
-      "name": "[format('{0}/default', variables('storageName'))]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
-      "apiVersion": "2023-01-01",
-      "name": "[format('{0}/default/{1}', variables('storageName'), variables('ncShareName'))]",
-      "properties": {
-        "shareQuota": 5120
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', split(format('{0}/default', variables('storageName')), '/')[0], split(format('{0}/default', variables('storageName')), '/')[1])]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
-      ]
-    },
-    {
-      "condition": "[parameters('useAcr')]",
-      "type": "Microsoft.ContainerRegistry/registries",
-      "apiVersion": "2023-01-01-preview",
-      "name": "[variables('acrName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Basic"
-      },
-      "properties": {
-        "adminUserEnabled": false,
-        "publicNetworkAccess": "Enabled"
-      }
-    },
-    {
-      "condition": "[parameters('useAcr')]",
-      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-      "apiVersion": "2023-01-31",
-      "name": "[format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq'))]",
-      "location": "[parameters('location')]"
-    },
-    {
-      "condition": "[parameters('useAcr')]",
-      "type": "Microsoft.Authorization/roleAssignments",
-      "apiVersion": "2022-04-01",
-      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
-      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')), variables('acrPullRoleDefId'))]",
-      "properties": {
-        "roleDefinitionId": "[variables('acrPullRoleDefId')]",
-        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq'))), '2023-01-31').principalId]",
-        "principalType": "ServicePrincipal"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
-        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/managedEnvironments",
-      "apiVersion": "2024-03-01",
-      "name": "[variables('caEnvName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "appLogsConfiguration": {
-          "destination": "log-analytics",
-          "logAnalyticsConfiguration": {
-            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('laName')), '2023-09-01').customerId]",
-            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', variables('laName')), '2023-09-01').primarySharedKey]"
-          }
+        {
+            "type": "Microsoft.Network/privateDnsZones",
+            "apiVersion": "2020-06-01",
+            "name": "private.postgres.database.azure.com",
+            "location": "global"
         },
-        "vnetConfiguration": {
-          "infrastructureSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'aca-infra')]"
+        {
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2020-06-01",
+            "name": "[format('{0}/{1}-link', 'private.postgres.database.azure.com', variables('vnetName'))]",
+            "location": "global",
+            "properties": {
+                "virtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+                },
+                "registrationEnabled": false
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'private.postgres.database.azure.com')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+            ]
         },
-        "zoneRedundant": false
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('laName'))]",
-        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/managedEnvironments/storages",
-      "apiVersion": "2024-03-01",
-      "name": "[format('{0}/ncfiles', variables('caEnvName'))]",
-      "properties": {
-        "azureFile": {
-          "accountName": "[variables('storageName')]",
-          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-01-01').keys[0].value]",
-          "shareName": "[variables('ncShareName')]",
-          "accessMode": "ReadWrite"
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-01-01",
+            "name": "[variables('storageName')]",
+            "location": "[parameters('location')]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2023-05-01",
+            "name": "[format('{0}/default/{1}', variables('storageName'), variables('ncDataShareName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+            ],
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2023-05-01",
+            "name": "[format('{0}/default/{1}', variables('storageName'), variables('ncConfigShareName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+            ],
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2023-05-01",
+            "name": "[format('{0}/default/{1}', variables('storageName'), variables('ncAppsShareName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+            ],
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.App/managedEnvironments/storages",
+            "apiVersion": "2024-03-01",
+            "name": "[format('{0}/{1}', variables('environmentName'), variables('ncDataStorageName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('environmentName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('storageName'), 'default', variables('ncDataShareName'))]"
+            ],
+            "properties": {
+                "azureFile": {
+                    "accessMode": "ReadWrite",
+                    "accountName": "[variables('storageName')]",
+                    "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-05-01').keys[0].value]",
+                    "shareName": "[variables('ncDataShareName')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.App/managedEnvironments/storages",
+            "apiVersion": "2024-03-01",
+            "name": "[format('{0}/{1}', variables('environmentName'), variables('ncConfigStorageName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('environmentName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('storageName'), 'default', variables('ncConfigShareName'))]"
+            ],
+            "properties": {
+                "azureFile": {
+                    "accessMode": "ReadWrite",
+                    "accountName": "[variables('storageName')]",
+                    "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-05-01').keys[0].value]",
+                    "shareName": "[variables('ncConfigShareName')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.App/managedEnvironments/storages",
+            "apiVersion": "2024-03-01",
+            "name": "[format('{0}/{1}', variables('environmentName'), variables('ncAppsStorageName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('environmentName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('storageName'), 'default', variables('ncAppsShareName'))]"
+            ],
+            "properties": {
+                "azureFile": {
+                    "accessMode": "ReadWrite",
+                    "accountName": "[variables('storageName')]",
+                    "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-05-01').keys[0].value]",
+                    "shareName": "[variables('ncAppsShareName')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices",
+            "apiVersion": "2023-01-01",
+            "name": "[format('{0}/default', variables('storageName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+            ]
+        },
+        {
+            "condition": "[parameters('useAcr')]",
+            "type": "Microsoft.ContainerRegistry/registries",
+            "apiVersion": "2023-01-01-preview",
+            "name": "[variables('acrName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Basic"
+            },
+            "properties": {
+                "adminUserEnabled": false,
+                "publicNetworkAccess": "Enabled"
+            }
+        },
+        {
+            "condition": "[parameters('useAcr')]",
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "apiVersion": "2023-01-31",
+            "name": "[format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq'))]",
+            "location": "[parameters('location')]"
+        },
+        {
+            "condition": "[parameters('useAcr')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "scope": "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+            "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')), variables('acrPullRoleDefId'))]",
+            "properties": {
+                "roleDefinitionId": "[variables('acrPullRoleDefId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq'))), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')))]"
+            ]
+        },
+        {
+            "type": "Microsoft.App/managedEnvironments",
+            "apiVersion": "2024-03-01",
+            "name": "[variables('caEnvName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "appLogsConfiguration": {
+                    "destination": "log-analytics",
+                    "logAnalyticsConfiguration": {
+                        "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('laName')), '2023-09-01').customerId]",
+                        "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', variables('laName')), '2023-09-01').primarySharedKey]"
+                    }
+                },
+                "vnetConfiguration": {
+                    "infrastructureSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'aca-infra')]"
+                },
+                "zoneRedundant": false
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('laName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+            "apiVersion": "2023-06-01-preview",
+            "name": "[variables('pgServerName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_B1ms",
+                "tier": "Burstable"
+            },
+            "properties": {
+                "administratorLogin": "[parameters('postgresAdminUser')]",
+                "administratorLoginPassword": "[parameters('postgresAdminPassword')]",
+                "version": "16",
+                "storage": {
+                    "storageSizeGB": 64
+                },
+                "backup": {
+                    "backupRetentionDays": 7,
+                    "geoRedundantBackup": "Disabled"
+                },
+                "network": {
+                    "publicNetworkAccess": "Disabled",
+                    "delegatedSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'pg-delegated')]",
+                    "privateDnsZoneArmResourceId": "[resourceId('Microsoft.Network/privateDnsZones', 'private.postgres.database.azure.com')]"
+                },
+                "highAvailability": {
+                    "mode": "Disabled"
+                },
+                "maintenanceWindow": {
+                    "customWindow": "Disabled",
+                    "dayOfWeek": 0,
+                    "startHour": 0,
+                    "startMinute": 0
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', split(format('{0}/{1}-link', 'private.postgres.database.azure.com', variables('vnetName')), '/')[0], split(format('{0}/{1}-link', 'private.postgres.database.azure.com', variables('vnetName')), '/')[1])]",
+                "[resourceId('Microsoft.Network/privateDnsZones', 'private.postgres.database.azure.com')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+            "apiVersion": "2023-06-01-preview",
+            "name": "[format('{0}/{1}', variables('pgServerName'), parameters('postgresDbName'))]",
+            "properties": {
+                "charset": "UTF8",
+                "collation": "en_US.utf8"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.App/containerApps",
+            "apiVersion": "2024-03-01",
+            "name": "[variables('ncAppName')]",
+            "location": "[parameters('location')]",
+            "identity": "[if(parameters('useAcr'), createObject('type', 'UserAssigned', 'userAssignedIdentities', createObject(format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')))), createObject())), null())]",
+            "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
+                "configuration": {
+                    "activeRevisionsMode": "Single",
+                    "ingress": {
+                        "external": true,
+                        "targetPort": 80,
+                        "transport": "auto",
+                        "allowInsecure": false
+                    },
+                    "registries": "[if(parameters('useAcr'), createArray(createObject('server', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq'))))), createArray())]",
+                    "secrets": [
+                        {
+                            "name": "pg-password",
+                            "value": "[parameters('postgresAdminPassword')]"
+                        },
+                        {
+                            "name": "nc-admin-password",
+                            "value": "[parameters('nextcloudAdminPassword')]"
+                        },
+                        {
+                            "name": "oo-jwt-secret",
+                            "value": "[parameters('onlyofficeJwtSecret')]"
+                        }
+                    ]
+                },
+                "template": {
+                    "scale": {
+                        "minReplicas": 1,
+                        "maxReplicas": 1
+                    },
+                    "volumes": [
+                        {
+                            "name": "ncdata",
+                            "storageType": "AzureFile",
+                            "storageName": "[variables('ncDataStorageName')]",
+                            "mountOptions": "uid=33,gid=33,dir_mode=0770,file_mode=0660,nosharesock,mfsymlinks"
+                        },
+                        {
+                            "name": "ncconfig",
+                            "storageType": "AzureFile",
+                            "storageName": "[variables('ncConfigStorageName')]",
+                            "mountOptions": "uid=33,gid=33,dir_mode=0770,file_mode=0660,nosharesock,mfsymlinks"
+                        },
+                        {
+                            "name": "ncapps",
+                            "storageType": "AzureFile",
+                            "storageName": "[variables('ncAppsStorageName')]",
+                            "mountOptions": "uid=33,gid=33,dir_mode=0770,file_mode=0660,nosharesock,mfsymlinks"
+                        }
+                    ],
+                    "containers": [
+                        {
+                            "name": "nextcloud",
+                            "image": "[if(parameters('useAcr'), format('{0}/nextcloud-custom:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer, parameters('nextcloudImageTag')), parameters('nextcloudImageOverride'))]",
+                            "resources": {
+                                "cpu": "[json(parameters('ncCpu'))]",
+                                "memory": "[parameters('ncMemory')]"
+                            },
+                            "env": [
+                                {
+                                    "name": "NEXTCLOUD_ADMIN_USER",
+                                    "value": "[parameters('nextcloudAdminUser')]"
+                                },
+                                {
+                                    "name": "NEXTCLOUD_ADMIN_PASSWORD",
+                                    "secretRef": "nc-admin-password"
+                                },
+                                {
+                                    "name": "POSTGRES_HOST",
+                                    "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
+                                },
+                                {
+                                    "name": "POSTGRES_DB",
+                                    "value": "[parameters('postgresDbName')]"
+                                },
+                                {
+                                    "name": "POSTGRES_USER",
+                                    "value": "[parameters('postgresAdminUser')]"
+                                },
+                                {
+                                    "name": "POSTGRES_PASSWORD",
+                                    "secretRef": "pg-password"
+                                },
+                                {
+                                    "name": "REDIS_HOST",
+                                    "value": "127.0.0.1"
+                                },
+                                {
+                                    "name": "REDIS_HOST_PORT",
+                                    "value": "6379"
+                                },
+                                {
+                                    "name": "NEXTCLOUD_TRUSTED_DOMAINS",
+                                    "value": "[parameters('cloudFqdn')]"
+                                },
+                                {
+                                    "name": "OVERWRITEHOST",
+                                    "value": "[parameters('cloudFqdn')]"
+                                },
+                                {
+                                    "name": "OVERWRITEPROTOCOL",
+                                    "value": "https"
+                                },
+                                {
+                                    "name": "OVERWRITECLIURL",
+                                    "value": "[format('https://{0}', parameters('cloudFqdn'))]"
+                                },
+                                {
+                                    "name": "OO_PUBLIC_URL",
+                                    "value": "[format('https://{0}/', parameters('officeFqdn'))]"
+                                },
+                                {
+                                    "name": "OO_INTERNAL_URL",
+                                    "value": "[format('http://{0}', variables('ooAppName'))]"
+                                },
+                                {
+                                    "name": "OO_JWT_SECRET",
+                                    "secretRef": "oo-jwt-secret"
+                                },
+                                {
+                                    "name": "OO_JWT_HEADER",
+                                    "value": "Authorization"
+                                },
+                                {
+                                    "name": "PHP_MEMORY_LIMIT",
+                                    "value": "512M"
+                                },
+                                {
+                                    "name": "UPLOAD_MAX_SIZE",
+                                    "value": "10G"
+                                },
+                                {
+                                    "name": "NEXTCLOUD_UPDATE",
+                                    "value": "1"
+                                },
+                                {
+                                    "name": "PGSSLMODE",
+                                    "value": "require"
+                                },
+                                {
+                                    "name": "HOME",
+                                    "value": "/tmp"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "volumeName": "ncconfig",
+                                    "mountPath": "/var/www/html/config"
+                                },
+                                {
+                                    "volumeName": "ncdata",
+                                    "mountPath": "/var/www/html/data"
+                                },
+                                {
+                                    "volumeName": "ncapps",
+                                    "mountPath": "/var/www/html/custom_apps"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "cron",
+                            "image": "[if(parameters('useAcr'), format('{0}/nextcloud-custom:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer, parameters('nextcloudImageTag')), parameters('nextcloudImageOverride'))]",
+                            "command": [
+                                "/cron.sh"
+                            ],
+                            "resources": {
+                                "cpu": "[json('0.25')]",
+                                "memory": "0.5Gi"
+                            },
+                            "env": [
+                                {
+                                    "name": "POSTGRES_HOST",
+                                    "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
+                                },
+                                {
+                                    "name": "POSTGRES_DB",
+                                    "value": "[parameters('postgresDbName')]"
+                                },
+                                {
+                                    "name": "POSTGRES_USER",
+                                    "value": "[parameters('postgresAdminUser')]"
+                                },
+                                {
+                                    "name": "POSTGRES_PASSWORD",
+                                    "secretRef": "pg-password"
+                                },
+                                {
+                                    "name": "REDIS_HOST",
+                                    "value": "127.0.0.1"
+                                },
+                                {
+                                    "name": "REDIS_HOST_PORT",
+                                    "value": "6379"
+                                },
+                                {
+                                    "name": "PGSSLMODE",
+                                    "value": "require"
+                                },
+                                {
+                                    "name": "HOME",
+                                    "value": "/tmp"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "volumeName": "ncconfig",
+                                    "mountPath": "/var/www/html/config"
+                                },
+                                {
+                                    "volumeName": "ncdata",
+                                    "mountPath": "/var/www/html/data"
+                                },
+                                {
+                                    "volumeName": "ncapps",
+                                    "mountPath": "/var/www/html/custom_apps"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "redis",
+                            "image": "[variables('redisImage')]",
+                            "resources": {
+                                "cpu": "[json('0.25')]",
+                                "memory": "0.5Gi"
+                            },
+                            "probes": [
+                                {
+                                    "type": "Liveness",
+                                    "tcpSocket": {
+                                        "port": 6379
+                                    },
+                                    "initialDelaySeconds": 10,
+                                    "periodSeconds": 30
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', variables('pgServerName'), parameters('postgresDbName'))]",
+                "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')), variables('acrPullRoleDefId')))]",
+                "[resourceId('Microsoft.App/managedEnvironments/storages', variables('environmentName'), variables('ncDataStorageName'))]",
+                "[resourceId('Microsoft.App/managedEnvironments/storages', variables('environmentName'), variables('ncConfigStorageName'))]",
+                "[resourceId('Microsoft.App/managedEnvironments/storages', variables('environmentName'), variables('ncAppsStorageName'))]"
+            ],
+            "condition": "[parameters('useAcr')]"
+        },
+        {
+            "type": "Microsoft.App/containerApps",
+            "apiVersion": "2024-03-01",
+            "name": "[variables('ncAppName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
+                "configuration": {
+                    "activeRevisionsMode": "Single",
+                    "ingress": {
+                        "external": true,
+                        "targetPort": 80,
+                        "transport": "auto",
+                        "allowInsecure": false
+                    },
+                    "secrets": [
+                        {
+                            "name": "pg-password",
+                            "value": "[parameters('postgresAdminPassword')]"
+                        },
+                        {
+                            "name": "nc-admin-password",
+                            "value": "[parameters('nextcloudAdminPassword')]"
+                        },
+                        {
+                            "name": "oo-jwt-secret",
+                            "value": "[parameters('onlyofficeJwtSecret')]"
+                        }
+                    ]
+                },
+                "template": {
+                    "scale": {
+                        "minReplicas": 1,
+                        "maxReplicas": 1
+                    },
+                    "volumes": [
+                        {
+                            "name": "ncdata",
+                            "storageType": "AzureFile",
+                            "storageName": "[variables('ncDataStorageName')]",
+                            "mountOptions": "uid=33,gid=33,dir_mode=0770,file_mode=0660,nosharesock,mfsymlinks"
+                        },
+                        {
+                            "name": "ncconfig",
+                            "storageType": "AzureFile",
+                            "storageName": "[variables('ncConfigStorageName')]",
+                            "mountOptions": "uid=33,gid=33,dir_mode=0770,file_mode=0660,nosharesock,mfsymlinks"
+                        },
+                        {
+                            "name": "ncapps",
+                            "storageType": "AzureFile",
+                            "storageName": "[variables('ncAppsStorageName')]",
+                            "mountOptions": "uid=33,gid=33,dir_mode=0770,file_mode=0660,nosharesock,mfsymlinks"
+                        }
+                    ],
+                    "containers": [
+                        {
+                            "name": "nextcloud",
+                            "image": "[parameters('nextcloudImageOverride')]",
+                            "resources": {
+                                "cpu": "[json(parameters('ncCpu'))]",
+                                "memory": "[parameters('ncMemory')]"
+                            },
+                            "env": [
+                                {
+                                    "name": "NEXTCLOUD_ADMIN_USER",
+                                    "value": "[parameters('nextcloudAdminUser')]"
+                                },
+                                {
+                                    "name": "NEXTCLOUD_ADMIN_PASSWORD",
+                                    "secretRef": "nc-admin-password"
+                                },
+                                {
+                                    "name": "POSTGRES_HOST",
+                                    "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
+                                },
+                                {
+                                    "name": "POSTGRES_DB",
+                                    "value": "[parameters('postgresDbName')]"
+                                },
+                                {
+                                    "name": "POSTGRES_USER",
+                                    "value": "[parameters('postgresAdminUser')]"
+                                },
+                                {
+                                    "name": "POSTGRES_PASSWORD",
+                                    "secretRef": "pg-password"
+                                },
+                                {
+                                    "name": "REDIS_HOST",
+                                    "value": "127.0.0.1"
+                                },
+                                {
+                                    "name": "REDIS_HOST_PORT",
+                                    "value": "6379"
+                                },
+                                {
+                                    "name": "NEXTCLOUD_TRUSTED_DOMAINS",
+                                    "value": "[parameters('cloudFqdn')]"
+                                },
+                                {
+                                    "name": "OVERWRITEHOST",
+                                    "value": "[parameters('cloudFqdn')]"
+                                },
+                                {
+                                    "name": "OVERWRITEPROTOCOL",
+                                    "value": "https"
+                                },
+                                {
+                                    "name": "OVERWRITECLIURL",
+                                    "value": "[format('https://{0}', parameters('cloudFqdn'))]"
+                                },
+                                {
+                                    "name": "OO_PUBLIC_URL",
+                                    "value": "[format('https://{0}/', parameters('officeFqdn'))]"
+                                },
+                                {
+                                    "name": "OO_INTERNAL_URL",
+                                    "value": "[format('http://{0}', variables('ooAppName'))]"
+                                },
+                                {
+                                    "name": "OO_JWT_SECRET",
+                                    "secretRef": "oo-jwt-secret"
+                                },
+                                {
+                                    "name": "OO_JWT_HEADER",
+                                    "value": "Authorization"
+                                },
+                                {
+                                    "name": "PHP_MEMORY_LIMIT",
+                                    "value": "512M"
+                                },
+                                {
+                                    "name": "UPLOAD_MAX_SIZE",
+                                    "value": "10G"
+                                },
+                                {
+                                    "name": "NEXTCLOUD_UPDATE",
+                                    "value": "1"
+                                },
+                                {
+                                    "name": "PGSSLMODE",
+                                    "value": "require"
+                                },
+                                {
+                                    "name": "HOME",
+                                    "value": "/tmp"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "volumeName": "ncconfig",
+                                    "mountPath": "/var/www/html/config"
+                                },
+                                {
+                                    "volumeName": "ncdata",
+                                    "mountPath": "/var/www/html/data"
+                                },
+                                {
+                                    "volumeName": "ncapps",
+                                    "mountPath": "/var/www/html/custom_apps"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "cron",
+                            "image": "[parameters('nextcloudImageOverride')]",
+                            "command": [
+                                "/cron.sh"
+                            ],
+                            "resources": {
+                                "cpu": "[json('0.25')]",
+                                "memory": "0.5Gi"
+                            },
+                            "env": [
+                                {
+                                    "name": "POSTGRES_HOST",
+                                    "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
+                                },
+                                {
+                                    "name": "POSTGRES_DB",
+                                    "value": "[parameters('postgresDbName')]"
+                                },
+                                {
+                                    "name": "POSTGRES_USER",
+                                    "value": "[parameters('postgresAdminUser')]"
+                                },
+                                {
+                                    "name": "POSTGRES_PASSWORD",
+                                    "secretRef": "pg-password"
+                                },
+                                {
+                                    "name": "REDIS_HOST",
+                                    "value": "127.0.0.1"
+                                },
+                                {
+                                    "name": "REDIS_HOST_PORT",
+                                    "value": "6379"
+                                },
+                                {
+                                    "name": "PGSSLMODE",
+                                    "value": "require"
+                                },
+                                {
+                                    "name": "HOME",
+                                    "value": "/tmp"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "volumeName": "ncconfig",
+                                    "mountPath": "/var/www/html/config"
+                                },
+                                {
+                                    "volumeName": "ncdata",
+                                    "mountPath": "/var/www/html/data"
+                                },
+                                {
+                                    "volumeName": "ncapps",
+                                    "mountPath": "/var/www/html/custom_apps"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "redis",
+                            "image": "[variables('redisImage')]",
+                            "resources": {
+                                "cpu": "[json('0.25')]",
+                                "memory": "0.5Gi"
+                            },
+                            "probes": [
+                                {
+                                    "type": "Liveness",
+                                    "tcpSocket": {
+                                        "port": 6379
+                                    },
+                                    "initialDelaySeconds": 10,
+                                    "periodSeconds": 30
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', variables('pgServerName'), parameters('postgresDbName'))]",
+                "[resourceId('Microsoft.App/managedEnvironments/storages', variables('environmentName'), variables('ncDataStorageName'))]",
+                "[resourceId('Microsoft.App/managedEnvironments/storages', variables('environmentName'), variables('ncConfigStorageName'))]",
+                "[resourceId('Microsoft.App/managedEnvironments/storages', variables('environmentName'), variables('ncAppsStorageName'))]"
+            ],
+            "condition": "[not(parameters('useAcr'))]"
+        },
+        {
+            "type": "Microsoft.App/containerApps",
+            "apiVersion": "2024-03-01",
+            "name": "[variables('ooAppName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
+                "configuration": {
+                    "activeRevisionsMode": "Single",
+                    "ingress": {
+                        "external": true,
+                        "targetPort": 80,
+                        "transport": "auto",
+                        "allowInsecure": false
+                    },
+                    "secrets": [
+                        {
+                            "name": "oo-jwt-secret",
+                            "value": "[parameters('onlyofficeJwtSecret')]"
+                        }
+                    ]
+                },
+                "template": {
+                    "scale": {
+                        "minReplicas": 1,
+                        "maxReplicas": 1
+                    },
+                    "containers": [
+                        {
+                            "name": "documentserver",
+                            "image": "[variables('onlyofficeImage')]",
+                            "resources": {
+                                "cpu": "[json(parameters('ooCpu'))]",
+                                "memory": "[parameters('ooMemory')]"
+                            },
+                            "env": [
+                                {
+                                    "name": "JWT_ENABLED",
+                                    "value": "true"
+                                },
+                                {
+                                    "name": "JWT_SECRET",
+                                    "secretRef": "oo-jwt-secret"
+                                },
+                                {
+                                    "name": "JWT_HEADER",
+                                    "value": "Authorization"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]"
+            ]
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', variables('storageName'), variables('ncShareName')), '/')[0], split(format('{0}/default/{1}', variables('storageName'), variables('ncShareName')), '/')[1], split(format('{0}/default/{1}', variables('storageName'), variables('ncShareName')), '/')[2])]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.DBforPostgreSQL/flexibleServers",
-      "apiVersion": "2023-06-01-preview",
-      "name": "[variables('pgServerName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Standard_B1ms",
-        "tier": "Burstable"
-      },
-      "properties": {
-        "administratorLogin": "[parameters('postgresAdminUser')]",
-        "administratorLoginPassword": "[parameters('postgresAdminPassword')]",
-        "version": "16",
-        "storage": {
-          "storageSizeGB": 64
+    ],
+    "outputs": {
+        "nextcloudDefaultFqdn": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.App/containerApps', variables('ncAppName')), '2024-03-01').configuration.ingress.fqdn]"
         },
-        "backup": {
-          "backupRetentionDays": 7,
-          "geoRedundantBackup": "Disabled"
+        "onlyofficeDefaultFqdn": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.App/containerApps', variables('ooAppName')), '2024-03-01').configuration.ingress.fqdn]"
         },
-        "network": {
-          "publicNetworkAccess": "Disabled",
-          "delegatedSubnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'pg-delegated')]",
-          "privateDnsZoneArmResourceId": "[resourceId('Microsoft.Network/privateDnsZones', 'private.postgres.database.azure.com')]"
+        "nextcloudExpectedHost": {
+            "type": "string",
+            "value": "[parameters('cloudFqdn')]"
         },
-        "highAvailability": {
-          "mode": "Disabled"
-        },
-        "maintenanceWindow": {
-          "customWindow": "Disabled",
-          "dayOfWeek": 0,
-          "startHour": 0,
-          "startMinute": 0
+        "onlyofficeExpectedHost": {
+            "type": "string",
+            "value": "[parameters('officeFqdn')]"
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/privateDnsZones/virtualNetworkLinks', split(format('{0}/{1}-link', 'private.postgres.database.azure.com', variables('vnetName')), '/')[0], split(format('{0}/{1}-link', 'private.postgres.database.azure.com', variables('vnetName')), '/')[1])]",
-        "[resourceId('Microsoft.Network/privateDnsZones', 'private.postgres.database.azure.com')]",
-        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
-      "apiVersion": "2023-06-01-preview",
-      "name": "[format('{0}/{1}', variables('pgServerName'), parameters('postgresDbName'))]",
-      "properties": {
-        "charset": "UTF8",
-        "collation": "en_US.utf8"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/containerApps",
-      "apiVersion": "2024-03-01",
-      "name": "[variables('ncAppName')]",
-      "location": "[parameters('location')]",
-      "identity": "[if(parameters('useAcr'), createObject('type', 'UserAssigned', 'userAssignedIdentities', createObject(format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')))), createObject())), null())]",
-      "properties": {
-        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
-        "configuration": {
-          "activeRevisionsMode": "Single",
-          "ingress": {
-            "external": true,
-            "targetPort": 80,
-            "transport": "auto",
-            "allowInsecure": false
-          },
-          "registries": "[if(parameters('useAcr'), createArray(createObject('server', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer, 'identity', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq'))))), createArray())]",
-          "secrets": [
-            {
-              "name": "pg-password",
-              "value": "[parameters('postgresAdminPassword')]"
-            },
-            {
-              "name": "nc-admin-password",
-              "value": "[parameters('nextcloudAdminPassword')]"
-            },
-            {
-              "name": "oo-jwt-secret",
-              "value": "[parameters('onlyofficeJwtSecret')]"
-            }
-          ]
-        },
-        "template": {
-          "scale": {
-            "minReplicas": 1,
-            "maxReplicas": 1
-          },
-          "volumes": [
-            {
-              "name": "ncfiles",
-              "storageType": "AzureFile",
-              "storageName": "ncfiles"
-            }
-          ],
-          "containers": [
-            {
-              "name": "nextcloud",
-              "image": "[if(parameters('useAcr'), format('{0}/nextcloud-custom:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer, parameters('nextcloudImageTag')), parameters('nextcloudImageOverride'))]",
-              "resources": {
-                "cpu": "[json(parameters('ncCpu'))]",
-                "memory": "[parameters('ncMemory')]"
-              },
-              "env": [
-                {
-                  "name": "NEXTCLOUD_ADMIN_USER",
-                  "value": "[parameters('nextcloudAdminUser')]"
-                },
-                {
-                  "name": "NEXTCLOUD_ADMIN_PASSWORD",
-                  "secretRef": "nc-admin-password"
-                },
-                {
-                  "name": "POSTGRES_HOST",
-                  "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
-                },
-                {
-                  "name": "POSTGRES_DB",
-                  "value": "[parameters('postgresDbName')]"
-                },
-                {
-                  "name": "POSTGRES_USER",
-                  "value": "[parameters('postgresAdminUser')]"
-                },
-                {
-                  "name": "POSTGRES_PASSWORD",
-                  "secretRef": "pg-password"
-                },
-                {
-                  "name": "REDIS_HOST",
-                  "value": "127.0.0.1"
-                },
-                {
-                  "name": "REDIS_HOST_PORT",
-                  "value": "6379"
-                },
-                {
-                  "name": "NEXTCLOUD_TRUSTED_DOMAINS",
-                  "value": "[parameters('cloudFqdn')]"
-                },
-                {
-                  "name": "OVERWRITEHOST",
-                  "value": "[parameters('cloudFqdn')]"
-                },
-                {
-                  "name": "OVERWRITEPROTOCOL",
-                  "value": "https"
-                },
-                {
-                  "name": "OVERWRITECLIURL",
-                  "value": "[format('https://{0}', parameters('cloudFqdn'))]"
-                },
-                {
-                  "name": "OO_PUBLIC_URL",
-                  "value": "[format('https://{0}/', parameters('officeFqdn'))]"
-                },
-                {
-                  "name": "OO_INTERNAL_URL",
-                  "value": "[format('http://{0}', variables('ooAppName'))]"
-                },
-                {
-                  "name": "OO_JWT_SECRET",
-                  "secretRef": "oo-jwt-secret"
-                },
-                {
-                  "name": "OO_JWT_HEADER",
-                  "value": "Authorization"
-                },
-                {
-                  "name": "PHP_MEMORY_LIMIT",
-                  "value": "512M"
-                },
-                {
-                  "name": "UPLOAD_MAX_SIZE",
-                  "value": "10G"
-                },
-                {
-                  "name": "NEXTCLOUD_UPDATE",
-                  "value": "1"
-                },
-                {
-                  "name": "PGSSLMODE",
-                  "value": "require"
-                },
-                {
-                  "name": "HOME",
-                  "value": "/tmp"
-                }
-              ],
-              "volumeMounts": [
-                {
-                  "volumeName": "ncfiles",
-                  "mountPath": "/var/www/html"
-                }
-              ]
-            },
-            {
-              "name": "cron",
-              "image": "[if(parameters('useAcr'), format('{0}/nextcloud-custom:{1}', reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer, parameters('nextcloudImageTag')), parameters('nextcloudImageOverride'))]",
-              "command": [
-                "/cron.sh"
-              ],
-              "resources": {
-                "cpu": "[json('0.25')]",
-                "memory": "0.5Gi"
-              },
-              "env": [
-                {
-                  "name": "POSTGRES_HOST",
-                  "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
-                },
-                {
-                  "name": "POSTGRES_DB",
-                  "value": "[parameters('postgresDbName')]"
-                },
-                {
-                  "name": "POSTGRES_USER",
-                  "value": "[parameters('postgresAdminUser')]"
-                },
-                {
-                  "name": "POSTGRES_PASSWORD",
-                  "secretRef": "pg-password"
-                },
-                {
-                  "name": "REDIS_HOST",
-                  "value": "127.0.0.1"
-                },
-                {
-                  "name": "REDIS_HOST_PORT",
-                  "value": "6379"
-                },
-                {
-                  "name": "PGSSLMODE",
-                  "value": "require"
-                },
-                {
-                  "name": "HOME",
-                  "value": "/tmp"
-                }
-              ],
-              "volumeMounts": [
-                {
-                  "volumeName": "ncfiles",
-                  "mountPath": "/var/www/html"
-                }
-              ]
-            },
-            {
-              "name": "redis",
-              "image": "[variables('redisImage')]",
-              "resources": {
-                "cpu": "[json('0.25')]",
-                "memory": "0.5Gi"
-              },
-              "probes": [
-                {
-                  "type": "Liveness",
-                  "tcpSocket": {
-                    "port": 6379
-                  },
-                  "initialDelaySeconds": 10,
-                  "periodSeconds": 30
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
-        "[resourceId('Microsoft.App/managedEnvironments/storages', variables('caEnvName'), 'ncfiles')]",
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]",
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', variables('pgServerName'), parameters('postgresDbName'))]",
-        "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), format('{0}-{1}-uai-acr', variables('namePrefix'), variables('uniq')), variables('acrPullRoleDefId')))]"
-      ],
-      "condition": "[parameters('useAcr')]"
-    },
-    {
-      "type": "Microsoft.App/containerApps",
-      "apiVersion": "2024-03-01",
-      "name": "[variables('ncAppName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
-        "configuration": {
-          "activeRevisionsMode": "Single",
-          "ingress": {
-            "external": true,
-            "targetPort": 80,
-            "transport": "auto",
-            "allowInsecure": false
-          },
-          "secrets": [
-            {
-              "name": "pg-password",
-              "value": "[parameters('postgresAdminPassword')]"
-            },
-            {
-              "name": "nc-admin-password",
-              "value": "[parameters('nextcloudAdminPassword')]"
-            },
-            {
-              "name": "oo-jwt-secret",
-              "value": "[parameters('onlyofficeJwtSecret')]"
-            }
-          ]
-        },
-        "template": {
-          "scale": {
-            "minReplicas": 1,
-            "maxReplicas": 1
-          },
-          "volumes": [
-            {
-              "name": "ncfiles",
-              "storageType": "AzureFile",
-              "storageName": "ncfiles"
-            }
-          ],
-          "containers": [
-            {
-              "name": "nextcloud",
-              "image": "[parameters('nextcloudImageOverride')]",
-              "resources": {
-                "cpu": "[json(parameters('ncCpu'))]",
-                "memory": "[parameters('ncMemory')]"
-              },
-              "env": [
-                {
-                  "name": "NEXTCLOUD_ADMIN_USER",
-                  "value": "[parameters('nextcloudAdminUser')]"
-                },
-                {
-                  "name": "NEXTCLOUD_ADMIN_PASSWORD",
-                  "secretRef": "nc-admin-password"
-                },
-                {
-                  "name": "POSTGRES_HOST",
-                  "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
-                },
-                {
-                  "name": "POSTGRES_DB",
-                  "value": "[parameters('postgresDbName')]"
-                },
-                {
-                  "name": "POSTGRES_USER",
-                  "value": "[parameters('postgresAdminUser')]"
-                },
-                {
-                  "name": "POSTGRES_PASSWORD",
-                  "secretRef": "pg-password"
-                },
-                {
-                  "name": "REDIS_HOST",
-                  "value": "127.0.0.1"
-                },
-                {
-                  "name": "REDIS_HOST_PORT",
-                  "value": "6379"
-                },
-                {
-                  "name": "NEXTCLOUD_TRUSTED_DOMAINS",
-                  "value": "[parameters('cloudFqdn')]"
-                },
-                {
-                  "name": "OVERWRITEHOST",
-                  "value": "[parameters('cloudFqdn')]"
-                },
-                {
-                  "name": "OVERWRITEPROTOCOL",
-                  "value": "https"
-                },
-                {
-                  "name": "OVERWRITECLIURL",
-                  "value": "[format('https://{0}', parameters('cloudFqdn'))]"
-                },
-                {
-                  "name": "OO_PUBLIC_URL",
-                  "value": "[format('https://{0}/', parameters('officeFqdn'))]"
-                },
-                {
-                  "name": "OO_INTERNAL_URL",
-                  "value": "[format('http://{0}', variables('ooAppName'))]"
-                },
-                {
-                  "name": "OO_JWT_SECRET",
-                  "secretRef": "oo-jwt-secret"
-                },
-                {
-                  "name": "OO_JWT_HEADER",
-                  "value": "Authorization"
-                },
-                {
-                  "name": "PHP_MEMORY_LIMIT",
-                  "value": "512M"
-                },
-                {
-                  "name": "UPLOAD_MAX_SIZE",
-                  "value": "10G"
-                },
-                {
-                  "name": "NEXTCLOUD_UPDATE",
-                  "value": "1"
-                }
-              ],
-              "volumeMounts": [
-                {
-                  "volumeName": "ncfiles",
-                  "mountPath": "/var/www/html"
-                }
-              ]
-            },
-            {
-              "name": "cron",
-              "image": "[parameters('nextcloudImageOverride')]",
-              "command": [
-                "/cron.sh"
-              ],
-              "resources": {
-                "cpu": "[json('0.25')]",
-                "memory": "0.5Gi"
-              },
-              "env": [
-                {
-                  "name": "POSTGRES_HOST",
-                  "value": "[format('{0}.postgres.database.azure.com', variables('pgServerName'))]"
-                },
-                {
-                  "name": "POSTGRES_DB",
-                  "value": "[parameters('postgresDbName')]"
-                },
-                {
-                  "name": "POSTGRES_USER",
-                  "value": "[parameters('postgresAdminUser')]"
-                },
-                {
-                  "name": "POSTGRES_PASSWORD",
-                  "secretRef": "pg-password"
-                },
-                {
-                  "name": "REDIS_HOST",
-                  "value": "127.0.0.1"
-                },
-                {
-                  "name": "REDIS_HOST_PORT",
-                  "value": "6379"
-                }
-              ],
-              "volumeMounts": [
-                {
-                  "volumeName": "ncfiles",
-                  "mountPath": "/var/www/html"
-                }
-              ]
-            },
-            {
-              "name": "redis",
-              "image": "[variables('redisImage')]",
-              "resources": {
-                "cpu": "[json('0.25')]",
-                "memory": "0.5Gi"
-              },
-              "probes": [
-                {
-                  "type": "Liveness",
-                  "tcpSocket": {
-                    "port": 6379
-                  },
-                  "initialDelaySeconds": 10,
-                  "periodSeconds": 30
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
-        "[resourceId('Microsoft.App/managedEnvironments/storages', variables('caEnvName'), 'ncfiles')]",
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]",
-        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers/databases', variables('pgServerName'), parameters('postgresDbName'))]"
-      ],
-      "condition": "[not(parameters('useAcr'))]"
-    },
-    {
-      "type": "Microsoft.App/containerApps",
-      "apiVersion": "2024-03-01",
-      "name": "[variables('ooAppName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]",
-        "configuration": {
-          "activeRevisionsMode": "Single",
-          "ingress": {
-            "external": true,
-            "targetPort": 80,
-            "transport": "auto",
-            "allowInsecure": false
-          },
-          "secrets": [
-            {
-              "name": "oo-jwt-secret",
-              "value": "[parameters('onlyofficeJwtSecret')]"
-            }
-          ]
-        },
-        "template": {
-          "scale": {
-            "minReplicas": 1,
-            "maxReplicas": 1
-          },
-          "containers": [
-            {
-              "name": "documentserver",
-              "image": "[variables('onlyofficeImage')]",
-              "resources": {
-                "cpu": "[json(parameters('ooCpu'))]",
-                "memory": "[parameters('ooMemory')]"
-              },
-              "env": [
-                {
-                  "name": "JWT_ENABLED",
-                  "value": "true"
-                },
-                {
-                  "name": "JWT_SECRET",
-                  "secretRef": "oo-jwt-secret"
-                },
-                {
-                  "name": "JWT_HEADER",
-                  "value": "Authorization"
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('caEnvName'))]"
-      ]
     }
-  ],
-  "outputs": {
-    "nextcloudDefaultFqdn": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('ncAppName')), '2024-03-01').configuration.ingress.fqdn]"
-    },
-    "onlyofficeDefaultFqdn": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('ooAppName')), '2024-03-01').configuration.ingress.fqdn]"
-    },
-    "nextcloudExpectedHost": {
-      "type": "string",
-      "value": "[parameters('cloudFqdn')]"
-    },
-    "onlyofficeExpectedHost": {
-      "type": "string",
-      "value": "[parameters('officeFqdn')]"
-    }
-  }
 }
