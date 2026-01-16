@@ -508,6 +508,14 @@
                 {
                   "name": "NEXTCLOUD_UPDATE",
                   "value": "1"
+                },
+                {
+                  "name": "PGSSLMODE",
+                  "value": "require"
+                },
+                {
+                  "name": "HOME",
+                  "value": "/tmp"
                 }
               ],
               "volumeMounts": [
@@ -551,6 +559,14 @@
                 {
                   "name": "REDIS_HOST_PORT",
                   "value": "6379"
+                },
+                {
+                  "name": "PGSSLMODE",
+                  "value": "require"
+                },
+                {
+                  "name": "HOME",
+                  "value": "/tmp"
                 }
               ],
               "volumeMounts": [
